@@ -7,25 +7,38 @@ class AudioManager {
         this.musicVolume = 0.3;
         this.sfxVolume = 0.5;
 
+        // Initialize AudioContext singleton (starts minimal)
+        this.audioContext = null;
+
         // List of available background music
         this.musicTracks = [
-            '../sounds/(16-Bit Cover) Daft PunkJulian Casablancas - Instant Crush [Sega GenesisMegadrive].mp3',
-            '../sounds/(8-Bit Cover) Adolescent\'s Orquesta - Virgen (NES 2A03 - MMC5).mp3',
-            '../sounds/(8-Bit Cover) Ice Cube - It Was A Good Day (2A03 - N163).mp3',
-            '../sounds/(8-Bit Cover) Miranda! - Don (NES 2A03).mp3',
-            '../sounds/(8-Bit Cover) Selena - Amor Prohibido (NES 2A03).mp3',
-            '../sounds/(Cover 8-Bit)  Chayanne - Torero [NES  Famicom].mp3',
-            '../sounds/(Cover 8-Bit) Canserbero - Es Épico (Beat) (NES 2A03 - MMC5).mp3',
-            '../sounds/(Cover 8-Bit) Flans - Las mil y una noches  En El Boulevard [Commodore 64].mp3',
-            '../sounds/(Cover 8-Bit) Los Tigres del Norte - La mesa del Rincón [Nintendo Gameboy].mp3',
-            '../sounds/Chiptune Loop for Shep.mp3',
-            '../sounds/El Triste 8 bits  16 Bits  - Mexican Bit.mp3',
-            '../sounds/La Gata Bajo La Lluvia 8bits - Mexican Bit.mp3',
-            '../sounds/No Hay Novedad cover 8-16 bits - Mexican Bit.mp3',
-            '../sounds/Tragos De Amargo Licor 8bits16bits -Mexican Bit.mp3',
-            '../sounds/Tus Jefes No Me Quieren  8bits16bits - Mexican Bit.mp3',
-            '../sounds/Vete Ya 8bits  16bits - Mexican Bit.mp3'
+            './sounds/(16-Bit Cover) Daft PunkJulian Casablancas - Instant Crush [Sega GenesisMegadrive].mp3',
+            './sounds/(8-Bit Cover) Adolescent\'s Orquesta - Virgen (NES 2A03 - MMC5).mp3',
+            './sounds/(8-Bit Cover) Ice Cube - It Was A Good Day (2A03 - N163).mp3',
+            './sounds/(8-Bit Cover) Miranda! - Don (NES 2A03).mp3',
+            './sounds/(8-Bit Cover) Selena - Amor Prohibido (NES 2A03).mp3',
+            './sounds/(Cover 8-Bit)  Chayanne - Torero [NES  Famicom].mp3',
+            './sounds/(Cover 8-Bit) Canserbero - Es Épico (Beat) (NES 2A03 - MMC5).mp3',
+            './sounds/(Cover 8-Bit) Flans - Las mil y una noches  En El Boulevard [Commodore 64].mp3',
+            './sounds/(Cover 8-Bit) Los Tigres del Norte - La mesa del Rincón [Nintendo Gameboy].mp3',
+            './sounds/Chiptune Loop for Shep.mp3',
+            './sounds/El Triste 8 bits  16 Bits  - Mexican Bit.mp3',
+            './sounds/La Gata Bajo La Lluvia 8bits - Mexican Bit.mp3',
+            './sounds/No Hay Novedad cover 8-16 bits - Mexican Bit.mp3',
+            './sounds/Tragos De Amargo Licor 8bits16bits -Mexican Bit.mp3',
+            './sounds/Tus Jefes No Me Quieren  8bits16bits - Mexican Bit.mp3',
+            './sounds/Vete Ya 8bits  16bits - Mexican Bit.mp3'
         ];
+    }
+
+    // Initialize AudioContext on user interaction
+    initAudioContext() {
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume().catch(e => console.log("Audio resume failed:", e));
+        }
     }
 
     // Load random background music
@@ -53,6 +66,7 @@ class AudioManager {
 
     // Play background music
     playMusic() {
+        this.initAudioContext(); // Ensure context is ready
         if (this.music && !this.muted) {
             this.music.play().catch(e => console.log('Music play failed:', e));
         }
@@ -66,53 +80,54 @@ class AudioManager {
         }
     }
 
-    // Create sound effect using Web Audio API
+    // Create sound effect using Web Audio API (Optimized)
     createBeep(frequency, duration, volume = 0.3) {
         if (this.muted) return;
+        this.initAudioContext();
 
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
+        if (!this.audioContext) return;
 
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+        try {
+            const oscillator = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
 
-        oscillator.frequency.value = frequency;
-        oscillator.type = 'square'; // Chiptune style
+            oscillator.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
 
-        gainNode.gain.setValueAtTime(volume * this.sfxVolume, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            oscillator.frequency.value = frequency;
+            oscillator.type = 'square'; // Chiptune style
 
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + duration);
+            gainNode.gain.setValueAtTime(volume * this.sfxVolume, this.audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+
+            oscillator.start(this.audioContext.currentTime);
+            oscillator.stop(this.audioContext.currentTime + duration);
+        } catch (e) {
+            console.error("Audio error:", e);
+        }
     }
 
     // Sound effects
     playLand() {
-        // Quick low beep for landing
         this.createBeep(150, 0.05, 0.2);
     }
 
     playSingle() {
-        // Single line clear
         this.createBeep(400, 0.1, 0.3);
     }
 
     playDouble() {
-        // Double line clear - two quick beeps
         this.createBeep(400, 0.08, 0.3);
         setTimeout(() => this.createBeep(500, 0.08, 0.3), 80);
     }
 
     playTriple() {
-        // Triple line clear - three quick beeps
         this.createBeep(400, 0.06, 0.3);
         setTimeout(() => this.createBeep(500, 0.06, 0.3), 60);
         setTimeout(() => this.createBeep(600, 0.06, 0.3), 120);
     }
 
     playTetris() {
-        // Tetris - epic sound
         this.createBeep(600, 0.05, 0.4);
         setTimeout(() => this.createBeep(700, 0.05, 0.4), 50);
         setTimeout(() => this.createBeep(800, 0.05, 0.4), 100);
@@ -120,7 +135,6 @@ class AudioManager {
     }
 
     playCombo(level) {
-        // Combo sound - pitch increases with combo level
         const basePitch = 600;
         const pitch = basePitch + (level * 100);
         this.createBeep(pitch, 0.1, 0.4);
@@ -142,3 +156,8 @@ const audioManager = new AudioManager();
 
 // Load random music on page load
 audioManager.loadRandomMusic();
+
+// Add interaction listener to unlock audio on first click
+document.addEventListener('click', function () {
+    audioManager.initAudioContext();
+}, { once: true });
