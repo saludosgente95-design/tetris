@@ -12,22 +12,22 @@ class AudioManager {
 
         // List of available background music
         this.musicTracks = [
-            './sounds/(16-Bit Cover) Daft PunkJulian Casablancas - Instant Crush [Sega GenesisMegadrive].mp3',
-            './sounds/(8-Bit Cover) Adolescent\'s Orquesta - Virgen (NES 2A03 - MMC5).mp3',
-            './sounds/(8-Bit Cover) Ice Cube - It Was A Good Day (2A03 - N163).mp3',
-            './sounds/(8-Bit Cover) Miranda! - Don (NES 2A03).mp3',
-            './sounds/(8-Bit Cover) Selena - Amor Prohibido (NES 2A03).mp3',
-            './sounds/(Cover 8-Bit)  Chayanne - Torero [NES  Famicom].mp3',
-            './sounds/(Cover 8-Bit) Canserbero - Es Épico (Beat) (NES 2A03 - MMC5).mp3',
-            './sounds/(Cover 8-Bit) Flans - Las mil y una noches  En El Boulevard [Commodore 64].mp3',
-            './sounds/(Cover 8-Bit) Los Tigres del Norte - La mesa del Rincón [Nintendo Gameboy].mp3',
-            './sounds/Chiptune Loop for Shep.mp3',
-            './sounds/El Triste 8 bits  16 Bits  - Mexican Bit.mp3',
-            './sounds/La Gata Bajo La Lluvia 8bits - Mexican Bit.mp3',
-            './sounds/No Hay Novedad cover 8-16 bits - Mexican Bit.mp3',
-            './sounds/Tragos De Amargo Licor 8bits16bits -Mexican Bit.mp3',
-            './sounds/Tus Jefes No Me Quieren  8bits16bits - Mexican Bit.mp3',
-            './sounds/Vete Ya 8bits  16bits - Mexican Bit.mp3'
+            './sounds/music_1.mp3',
+            './sounds/music_2.mp3',
+            './sounds/music_3.mp3',
+            './sounds/music_4.mp3',
+            './sounds/music_5.mp3',
+            './sounds/music_6.mp3',
+            './sounds/music_7.mp3',
+            './sounds/music_8.mp3',
+            './sounds/music_9.mp3',
+            './sounds/music_10.mp3',
+            './sounds/music_11.mp3',
+            './sounds/music_12.mp3',
+            './sounds/music_13.mp3',
+            './sounds/music_14.mp3',
+            './sounds/music_15.mp3',
+            './sounds/music_16.mp3'
         ];
     }
 
