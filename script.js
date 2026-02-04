@@ -850,6 +850,21 @@ $(document).keydown(function (e) {
   e.preventDefault(); // prevent the default action (scroll / move caret)
 });
 
+// Click listener for the debug button
+$('#debug-audio').click(function () {
+  console.log('Debug Audio Clicked');
+  if (typeof audioManager !== 'undefined') {
+    audioManager.initAudioContext();
+    audioManager.toggleMute(); // Toggle to refresh state
+    audioManager.toggleMute(); // Toggle back
+    audioManager.playSingle(); // Play a test sound
+    audioManager.playMusic(); // Force music play
+    alert("Trying to play audio... Check console/volume!");
+  } else {
+    alert("AudioManager is missing!");
+  }
+});
+
 $("#new-game").click(function () {
   board.newGame();
 });
