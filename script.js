@@ -578,7 +578,9 @@ class Board {
         }
 
         // Play landing sound
-        audioManager.playLand();
+        try {
+          if (typeof audioManager !== 'undefined') audioManager.playLand();
+        } catch (e) { console.warn("Audio error:", e); }
 
         this.removeShape(shape);
         this.addBlocks(blocks);
@@ -621,13 +623,15 @@ class Board {
           ref.setScore(ref.getScore() + 10);
         });
       }
-// Add sound effects to line clears
-if (linesCleared > 0 && typeof audioManager !== 'undefined') {
-  if (linesCleared === 1) audioManager.playSingle();
-  else if (linesCleared === 2) audioManager.playDouble();
-  else if (linesCleared === 3) audioManager.playTriple();
-  else if (linesCleared >= 4) audioManager.playTetris();
-}
+      // Add sound effects to line clears
+      try {
+        if (linesCleared > 0 && typeof audioManager !== 'undefined') {
+          if (linesCleared === 1) audioManager.playSingle();
+          else if (linesCleared === 2) audioManager.playDouble();
+          else if (linesCleared === 3) audioManager.playTriple();
+          else if (linesCleared >= 4) audioManager.playTetris();
+        }
+      } catch (e) { console.warn("Audio clear error:", e); }
     }
 
     // Tetris! (4 lines cleared)
