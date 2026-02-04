@@ -6,12 +6,13 @@ class Position {
 }
 
 class Block {
-  constructor(x, y) {
+  constructor(x, y, color = '') {
     this.x = x;
     this.y = y;
+    this.color = color;
 
     let block = document.createElement("div");
-    block.setAttribute("class", "block");
+    block.setAttribute("class", "block" + (color ? " " + color : ""));
     $(block).append(
       "<div class='inner-tile'><div class='inner-inner-tile'></div></div>"
     );
@@ -142,10 +143,10 @@ class Shape {
 class Square extends Shape {
   constructor(x, y) {
     let blocks = [];
-    blocks.push(new Block(x, y));
-    blocks.push(new Block(x, y + 1));
-    blocks.push(new Block(x + 1, y));
-    blocks.push(new Block(x + 1, y + 1));
+    blocks.push(new Block(x, y, 'color-square'));
+    blocks.push(new Block(x, y + 1, 'color-square'));
+    blocks.push(new Block(x + 1, y, 'color-square'));
+    blocks.push(new Block(x + 1, y + 1, 'color-square'));
     super(blocks);
   }
 }
@@ -153,16 +154,16 @@ class Square extends Shape {
 class LShape extends Shape {
   constructor(x, y) {
     let blocks = [];
-    blocks.push(new Block(x, y));
-    blocks.push(new Block(x - 1, y));
-    blocks.push(new Block(x + 1, y));
-    blocks.push(new Block(x + 1, y + 1));
+    blocks.push(new Block(x, y, 'color-lshape'));
+    blocks.push(new Block(x - 1, y, 'color-lshape'));
+    blocks.push(new Block(x + 1, y, 'color-lshape'));
+    blocks.push(new Block(x + 1, y + 1, 'color-lshape'));
     super(blocks);
     this.position = 0;
   }
 
   rotate() {
-    let blocks = this.rotatePositions().map(p => new Block(p.x, p.y));
+    let blocks = this.rotatePositions().map(p => new Block(p.x, p.y, 'color-lshape'));
     this.clear();
     this.addBlocks(blocks);
     this.position = this.getNextPosition();
@@ -220,16 +221,16 @@ class LShape extends Shape {
 class TShape extends Shape {
   constructor(x, y) {
     let blocks = [];
-    blocks.push(new Block(x, y));
-    blocks.push(new Block(x, y - 1));
-    blocks.push(new Block(x + 1, y));
-    blocks.push(new Block(x, y + 1));
+    blocks.push(new Block(x, y, 'color-tshape'));
+    blocks.push(new Block(x, y - 1, 'color-tshape'));
+    blocks.push(new Block(x + 1, y, 'color-tshape'));
+    blocks.push(new Block(x, y + 1, 'color-tshape'));
     super(blocks);
     this.position = 0;
   }
 
   rotate() {
-    let blocks = this.rotatePositions().map(p => new Block(p.x, p.y));
+    let blocks = this.rotatePositions().map(p => new Block(p.x, p.y, 'color-tshape'));
     this.clear();
     this.addBlocks(blocks);
     this.position = this.getNextPosition();
@@ -287,16 +288,16 @@ class TShape extends Shape {
 class ZShape extends Shape {
   constructor(x, y) {
     let blocks = [];
-    blocks.push(new Block(x, y));
-    blocks.push(new Block(x, y - 1));
-    blocks.push(new Block(x + 1, y));
-    blocks.push(new Block(x + 1, y + 1));
+    blocks.push(new Block(x, y, 'color-zshape'));
+    blocks.push(new Block(x, y - 1, 'color-zshape'));
+    blocks.push(new Block(x + 1, y, 'color-zshape'));
+    blocks.push(new Block(x + 1, y + 1, 'color-zshape'));
     super(blocks);
     this.position = 0;
   }
 
   rotate() {
-    let blocks = this.rotatePositions().map(p => new Block(p.x, p.y));
+    let blocks = this.rotatePositions().map(p => new Block(p.x, p.y, 'color-zshape'));
     this.clear();
     this.addBlocks(blocks);
     this.position = this.getNextPosition();
@@ -338,16 +339,16 @@ class ZShape extends Shape {
 class Line extends Shape {
   constructor(x, y) {
     let blocks = [];
-    blocks.push(new Block(x, y));
-    blocks.push(new Block(x - 1, y));
-    blocks.push(new Block(x + 1, y));
-    blocks.push(new Block(x + 2, y));
+    blocks.push(new Block(x, y, 'color-line'));
+    blocks.push(new Block(x - 1, y, 'color-line'));
+    blocks.push(new Block(x + 1, y, 'color-line'));
+    blocks.push(new Block(x + 2, y, 'color-line'));
     super(blocks);
     this.position = 0;
   }
 
   rotate() {
-    let blocks = this.rotatePositions().map(p => new Block(p.x, p.y));
+    let blocks = this.rotatePositions().map(p => new Block(p.x, p.y, 'color-line'));
     this.clear();
     this.addBlocks(blocks);
     this.position = this.getNextPosition();
@@ -392,23 +393,86 @@ class Board {
     this.shapes = [];
     this.interval = undefined;
     this.loopInterval = 1000;
+    this.baseLoopInterval = 1000;
     this.gameOver = true;
     this.loopIntervalFast = parseInt(1000 / 27);
     this.init();
     this.score = 0;
+    this.level = 1;
+    this.nextShapeType = this.getRandomRange(0, 4);
+    this.combo = 0;
+    this.lastClearedLines = 0;
   }
 
   setScore(value) {
     this.score = value;
     $("#score").text(this.score);
+    this.updateLevel();
   }
 
   getScore() {
     return this.score;
   }
 
+  updateLevel() {
+    const newLevel = Math.floor(this.score / 100) + 1;
+    if (newLevel !== this.level) {
+      this.level = newLevel;
+      $("#level").text(this.level);
+      // Increase speed: reduce interval by 50ms per level, min 200ms
+      this.loopInterval = Math.max(200, this.baseLoopInterval - (this.level - 1) * 50);
+      if (!this.moveFast && !this.gameOver) {
+        this.initGameLoop(this.loopInterval);
+      }
+    }
+  }
+
+  renderNextPiece() {
+    const preview = $("#next-piece-preview");
+    preview.empty();
+
+    // Mini blocks for preview (smaller scale)
+    const miniBlockSize = 12;
+    const offsetX = 20;
+    const offsetY = 15;
+
+    let positions = [];
+    switch (this.nextShapeType) {
+      case 0: // Line
+        positions = [[0, 0], [1, 0], [2, 0], [3, 0]];
+        break;
+      case 1: // Square
+        positions = [[0, 0], [0, 1], [1, 0], [1, 1]];
+        break;
+      case 2: // LShape
+        positions = [[0, 0], [1, 0], [2, 0], [2, 1]];
+        break;
+      case 3: // ZShape
+        positions = [[0, 0], [0, 1], [1, 1], [1, 2]];
+        break;
+      case 4: // TShape
+        positions = [[0, 0], [0, 1], [0, 2], [1, 1]];
+        break;
+    }
+
+    positions.forEach(([x, y]) => {
+      const miniBlock = $('<div></div>').css({
+        position: 'absolute',
+        width: miniBlockSize + 'px',
+        height: miniBlockSize + 'px',
+        left: (offsetX + y * miniBlockSize) + 'px',
+        top: (offsetY + x * miniBlockSize) + 'px',
+        background: 'linear-gradient(145deg, #e8b4d9, #c89ff5)',
+        border: '1px solid #d8a7e8',
+        borderRadius: '2px',
+        boxShadow: '0 0 6px rgba(200, 159, 245, 0.4)'
+      });
+      preview.append(miniBlock);
+    });
+  }
+
   init() {
-    $(".empty").each(function(index, ele) {
+    $(".empty").each(function (index, ele) {
       let x = parseInt(index / 10);
       let y = index % 10;
       $(ele).css({
@@ -433,8 +497,15 @@ class Board {
     }
     this.blocks = [];
     this.gameOver = false;
+    this.level = 1;
+    this.loopInterval = this.baseLoopInterval;
+    $("#level").text(this.level);
+    this.nextShapeType = this.getRandomRange(0, 4);
+    this.renderNextPiece();
     this.initGameLoop(this.loopInterval);
     this.setScore(0);
+    this.combo = 0;
+    this.lastClearedLines = 0;
     $("#banner").hide();
   }
 
@@ -443,7 +514,7 @@ class Board {
       clearInterval(this.interval);
     }
     let ref = this;
-    this.interval = setInterval(function() {
+    this.interval = setInterval(function () {
       ref.gameLoop();
     }, value);
   }
@@ -489,8 +560,28 @@ class Board {
         shape.fall();
         shape.render();
       } else {
+        // Piece has landed - add subtle sparkle only on contact edges
+        let blocks = shape.getBlocks();
+        for (let block of blocks) {
+          let pos = block.getPosition();
+          // Check if this block is touching the bottom or another block below
+          let blockBelow = this.getBlock(pos.x + 1, pos.y);
+          let touchingBottom = (pos.x >= 15);
+
+          if (blockBelow || touchingBottom) {
+            // Add sparkle to this specific block
+            $(block.element).addClass('landing-sparkle');
+            setTimeout(() => {
+              $(block.element).removeClass('landing-sparkle');
+            }, 400);
+          }
+        }
+
+        // Play landing sound
+        audioManager.playLand();
+
         this.removeShape(shape);
-        this.addBlocks(shape.getBlocks());
+        this.addBlocks(blocks);
         if (this.moveFast) {
           this.initGameLoop(this.loopInterval);
           this.moveFast = false;
@@ -507,6 +598,9 @@ class Board {
   }
 
   renderBlocks() {
+    let linesCleared = 0;
+    let allClearedBlocks = [];
+
     for (let x = 0; x < 16; x++) {
       let blocks = [];
       for (let y = 0; y < 10; y++) {
@@ -517,14 +611,38 @@ class Board {
         blocks.push(block);
       }
       if (blocks.length == 10) {
+        linesCleared++;
+        allClearedBlocks.push(...blocks);
         let ref = this;
         this.removeBlocks(blocks);
-        this.flashBlocks(blocks, function() {
+        this.flashBlocks(blocks, function () {
           ref.destroyBlocks(blocks);
           ref.fallBlocks(x);
           ref.setScore(ref.getScore() + 10);
         });
       }
+// Add sound effects to line clears
+if (linesCleared > 0 && typeof audioManager !== 'undefined') {
+  if (linesCleared === 1) audioManager.playSingle();
+  else if (linesCleared === 2) audioManager.playDouble();
+  else if (linesCleared === 3) audioManager.playTriple();
+  else if (linesCleared >= 4) audioManager.playTetris();
+}
+    }
+
+    // Tetris! (4 lines cleared)
+    if (linesCleared >= 4) {
+      // Add explosion effect to all cleared blocks
+      for (let block of allClearedBlocks) {
+        $(block.element).addClass('tetris-explosion');
+      }
+      // Flash the board
+      $('#board').addClass('board-flash');
+      setTimeout(() => {
+        $('#board').removeClass('board-flash');
+      }, 600);
+      // Bonus points for Tetris
+      this.setScore(this.getScore() + 40);
     }
   }
 
@@ -572,8 +690,10 @@ class Board {
   spawnShapes() {
     if (this.shapes.length == 0) {
       let shape = null;
+      // Use the pre-generated next shape
+      let shapeType = this.nextShapeType;
 
-      switch (this.getRandomRange(0, 4)) {
+      switch (shapeType) {
         case 0:
           {
             shape = new Line(0, 4);
@@ -604,6 +724,10 @@ class Board {
       shape.init();
       shape.render();
       this.shapes.push(shape);
+
+      // Generate next shape and update preview
+      this.nextShapeType = this.getRandomRange(0, 4);
+      this.renderNextPiece();
     }
   }
 
@@ -693,7 +817,7 @@ class Board {
 
 let board = new Board();
 
-$(document).keydown(function(e) {
+$(document).keydown(function (e) {
   switch (e.which) {
     case 37: // left
       board.leftKeyPress();
@@ -722,22 +846,22 @@ $(document).keydown(function(e) {
   e.preventDefault(); // prevent the default action (scroll / move caret)
 });
 
-$("#new-game").click(function() {
+$("#new-game").click(function () {
   board.newGame();
 });
 
-$("#down").click(function() {
+$("#down").click(function () {
   board.downKeyPress();
 });
 
-$("#rotate").click(function() {
+$("#rotate").click(function () {
   board.upKeyPress();
 });
 
-$("#left").click(function() {
+$("#left").click(function () {
   board.leftKeyPress();
 });
 
-$("#right").click(function() {
+$("#right").click(function () {
   board.rightKeyPress();
 });
