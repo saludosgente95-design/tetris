@@ -909,34 +909,44 @@ $(document).ready(function () {
     }
   });
 });
-});
 
 // Auto-Scale Board Logic
+// Auto-Scale Board Logic (Robust Version)
 function resizeBoard() {
   const board = document.getElementById('board');
   if (!board) return;
 
-  // Reset transform to get natural size for calculations
+  // Reset to natural size
   board.style.transform = 'none';
 
-  const container = document.getElementById('outer-board');
-  if (!container) return;
+  // Get full window height and width
+  const winHeight = window.innerHeight;
+  const winWidth = window.innerWidth;
 
-  // Available space in the flex container
-  const availHeight = container.clientHeight;
-  const availWidth = container.clientWidth;
+  // Measure fixed elements (Header + Footer)
+  const header = document.getElementById('score-header');
+  const footer = document.getElementById('mobile-controls');
 
-  const boardHeight = 448; // Base height (16 blocks * 28px) - actually slightly more with borders
-  const boardWidth = 280;  // Base width (10 blocks * 28px)
+  // Fallback heights if elements missing or not rendered yet
+  const headerH = header ? header.offsetHeight : 60;
+  const footerH = footer ? footer.offsetHeight : 120;
 
-  // Scale factor: Fit width AND height with some padding (20px)
-  // We prioritize containing the board fully.
+  // Calculate ACTUAL available vertical space
+  // We leave 20px breathing room total (10 top / 10 bottom)
+  const availableH = winHeight - headerH - footerH - 20;
+  const availableW = winWidth - 10;
+
+  const boardHeight = 448;
+  const boardWidth = 280;
+
+  // Determine scale to fit BOTH dimensions
   let scale = Math.min(
-    (availHeight - 20) / boardHeight,
-    (availWidth - 10) / boardWidth,
-    1 // Cap at 1.0 (don't zoom in)
+    availableH / boardHeight,
+    availableW / boardWidth,
+    1.0 // Never zoom in, only shrink
   );
 
+  // Apply scale
   if (scale < 1) {
     board.style.transform = `scale(${scale})`;
   } else {
