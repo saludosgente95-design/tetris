@@ -429,19 +429,31 @@ class Board {
   submitScore() {
     const tg = window.Telegram?.WebApp;
     let username = "Guest";
+    let userId = null;
 
     if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
       username = tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name || "User";
+      userId = tg.initDataUnsafe.user.id;
     }
 
     fetch('/api/score', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: username, score: this.score })
+      body: JSON.stringify({
+        username: username,
+        user_id: userId,
+        score: this.score,
+        level: this.level
+      })
     })
       .then(res => res.json())
-      .then(() => {
+      .then(data => {
         this.fetchLeaderboard(); // Refresh list after submit
+        if (data.reward) {
+          // Show reward in banner
+          $("#message").text(data.reward);
+          $("#banner").show();
+        }
       })
       .catch(err => console.error("Submit error:", err));
   }
@@ -1050,7 +1062,58 @@ $("#new-game").click(function () {
     audioManager.initAudioContext();
     audioManager.playMusic();
   }
-  board.newGame();
+
+  // Check play permission (daily limit / credits)
+  const tg = window.Telegram?.WebApp;
+  // Get ID from Unsafe Data or fallback query param if debugging
+  const urlParams = new URLSearchParams(window.location.search);
+  let userId = tg?.initDataUnsafe?.user?.id || urlParams.get('userId');
+
+  console.log("Checking play permission for UserID:", userId);
+
+  if (!userId) {
+    alert("Error: No se pudo identificar el usuario. Abre el juego desde Telegram.");
+    return;
+  }
+
+  $("#message").text("Verificando créditos...");
+  $("#banner").show();
+  $("#new-game").hide();
+
+  // DEBUG: Show ID trying to verify
+  // alert(`Debug ID: ${userId}`);
+
+  // Fetch with cache busting
+  fetch('/api/check_play?ts=' + new Date().getTime(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId })
+  })
+    .then(res => {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    })
+    .then(data => {
+      // alert(`Respuesta: ${JSON.stringify(data)}`); // Debug response
+      if (data.can_play) {
+        $("#banner").hide();
+        $("#new-game").show();
+        board.newGame();
+      } else {
+        $("#message").html(data.message || "No puedes jugar.");
+        $("#new-game").text("Cargar Créditos").show();
+        $("#new-game").one('click', () => {
+          // Redirect to bot chat for credits
+          if (tg) tg.close();
+        });
+      }
+    })
+    .catch(err => {
+      console.error("Check play error:", err);
+      // alert("Error Fetch: " + err.message);
+      $("#message").text("Error Conexión: " + err.message);
+      $("#new-game").text("Reintentar").show();
+    });
 });
 
 $("#down").click(function () {
