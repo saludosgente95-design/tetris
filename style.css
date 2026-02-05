@@ -317,32 +317,40 @@ body::after {
 }
 
 #message {
-  font-size: 18px;
-  color: var(--neon-pink);
-  margin-bottom: 10px;
+  font-size: 22px;
+  /* Larger */
+  color: #ff0055;
+  /* Bright Neon Red/Pink */
+  text-shadow: 0 0 10px #ff0055, 2px 2px #fff;
+  /* High glow + white outline for readability */
+  margin-bottom: 15px;
   animation: blink 0.5s infinite;
   text-transform: uppercase;
+  font-weight: bold;
 }
 
 @keyframes blink {
   50% {
-    opacity: 0;
+    opacity: 0.5;
   }
 }
 
 #new-game {
-  font-size: 10px;
-  color: var(--neon-cyan);
+  font-size: 12px;
+  color: #00ff88;
+  /* Bright Green */
+  background: rgba(0, 0, 0, 0.8);
   cursor: pointer;
   text-decoration: none;
-  border: 1px solid var(--neon-cyan);
-  padding: 5px;
+  border: 2px solid #00ff88;
+  padding: 10px;
   display: inline-block;
   margin-top: 10px;
+  box-shadow: 0 0 10px #00ff88;
 }
 
 #new-game:hover {
-  background: var(--neon-cyan);
+  background: #00ff88;
   color: #000;
 }
 
