@@ -896,6 +896,21 @@ class Board {
   }
 }
 
+// Mobile Drawer Logic
+$(document).ready(function () {
+  $("#lb-toggle").on("click", function () {
+    $("#leaderboard-panel").toggleClass("open");
+  });
+
+  // Auto-close if clicking outside
+  $(document).on("click", function (e) {
+    if (!$(e.target).closest("#leaderboard-panel, #lb-toggle").length) {
+      $("#leaderboard-panel").removeClass("open");
+    }
+  });
+});
+
+// Start Game
 let board = new Board();
 
 $(document).keydown(function (e) {
