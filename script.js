@@ -411,7 +411,11 @@ class Board {
   }
 
   fetchLeaderboard() {
-    fetch('/api/leaderboard')
+    const urlParams = new URLSearchParams(window.location.search);
+    const apiBase = urlParams.get('api_url') || '';
+    const url = apiBase ? `${apiBase}/api/leaderboard` : '/api/leaderboard';
+
+    fetch(url)
       .then(res => res.json())
       .then(data => {
         const list = $("#lb-list");
@@ -436,7 +440,11 @@ class Board {
       userId = tg.initDataUnsafe.user.id;
     }
 
-    fetch('/api/score', {
+    const urlParams = new URLSearchParams(window.location.search);
+    const apiBase = urlParams.get('api_url') || '';
+    const url = apiBase ? `${apiBase}/api/score` : '/api/score';
+
+    fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
