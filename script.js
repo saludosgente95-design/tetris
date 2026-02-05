@@ -444,6 +444,36 @@ class Board {
         this.fetchLeaderboard(); // Refresh list after submit
       })
       .catch(err => console.error("Submit error:", err));
+      .catch (err => console.error("Submit error:", err));
+  }
+
+  showActionText(text, animClass) {
+    const el = $("#action-text");
+    const container = $("#side-decor-right");
+
+    if (window.innerWidth <= 600) {
+      // Vertical Stack for Mobile
+      container.empty();
+      for (let char of text) {
+        container.append(`<div>${char}</div>`);
+      }
+      container.addClass(animClass);
+    } else {
+      // Desktop
+      el.text(text);
+      el.addClass(animClass);
+    }
+
+    // Reset after animation
+    setTimeout(() => {
+      if (window.innerWidth <= 600) {
+        container.removeClass(animClass);
+        container.html('<div id="action-text"></div>');
+      } else {
+        el.removeClass(animClass);
+        el.text("READY"); // Reset to idle state
+      }
+    }, 2000);
   }
 
   setScore(value) {
@@ -700,200 +730,205 @@ class Board {
           ref.setScore(ref.getScore() + 10);
         });
       }
-      // Add sound effects to line clears
-      try {
-        if (linesCleared > 0 && typeof audioManager !== 'undefined') {
-          if (linesCleared === 1) audioManager.playSingle();
-          else if (linesCleared === 2) audioManager.playDouble();
-          else if (linesCleared === 3) audioManager.playTriple();
-          else if (linesCleared >= 4) audioManager.playTetris();
-        }
-      } catch (e) { console.warn("Audio clear error:", e); }
     }
-
-    // Tetris! (4 lines cleared)
-    if (linesCleared >= 4) {
-      // Add explosion effect to all cleared blocks
-      for (let block of allClearedBlocks) {
-        $(block.element).addClass('tetris-explosion');
+    // Add sound effects to line clears
+    try {
+      if (linesCleared > 0 && typeof audioManager !== 'undefined') {
+        if (linesCleared === 1) { audioManager.playSingle(); this.showActionText("SINGLE", "anim-flash"); }
+        else if (linesCleared === 2) { audioManager.playDouble(); this.showActionText("DOUBLE", "anim-spin"); }
+        else if (linesCleared === 3) { audioManager.playTriple(); this.showActionText("TRIPLE", "anim-shake"); }
+        else if (linesCleared >= 4) { audioManager.playTetris(); this.showActionText("TETRIS!", "anim-tetris"); }
       }
-      // Flash the board
-      $('#board').addClass('board-flash');
-      setTimeout(() => {
-        $('#board').removeClass('board-flash');
-      }, 600);
-      // Bonus points for Tetris
-      this.setScore(this.getScore() + 40);
-    }
+    } catch (e) { console.warn("Audio clear error:", e); }
   }
 
-  flashBlocks(blocks, callback) {
-    let anim = null;
-    for (let block of blocks) {
-      anim = block.flash();
-    }
-    anim[0].onfinish = callback;
+  // Tetris! (4 lines cleared)
+  if(linesCleared >= 4) {
+  // Add explosion effect to all cleared blocks
+  for (let block of allClearedBlocks) {
+    $(block.element).addClass('tetris-explosion');
+  }
+  // Flash the board
+  $('#board').addClass('board-flash');
+  setTimeout(() => {
+    $('#board').removeClass('board-flash');
+  }, 600);
+  // Bonus points for Tetris
+  this.setScore(this.getScore() + 40);
+
+  // EXTRA DISTRACTION: Flash left side too
+  $("#side-decor-left").css('color', 'red').addClass('anim-shake');
+  setTimeout(() => $("#side-decor-left").css('color', '').removeClass('anim-shake'), 1000);
+}
   }
 
-  fallBlocks(i) {
-    for (let x = 0; x < i; x++) {
-      for (let y = 0; y < 10; y++) {
-        let block = this.getBlock(x, y);
-        if (block) {
-          block.fall();
-          block.render();
-        }
+flashBlocks(blocks, callback) {
+  let anim = null;
+  for (let block of blocks) {
+    anim = block.flash();
+  }
+  anim[0].onfinish = callback;
+}
+
+fallBlocks(i) {
+  for (let x = 0; x < i; x++) {
+    for (let y = 0; y < 10; y++) {
+      let block = this.getBlock(x, y);
+      if (block) {
+        block.fall();
+        block.render();
       }
     }
   }
+}
 
-  removeBlocks(blocks) {
-    for (let block of blocks) {
-      this.blocks.splice(this.blocks.indexOf(block), 1);
+removeBlocks(blocks) {
+  for (let block of blocks) {
+    this.blocks.splice(this.blocks.indexOf(block), 1);
+  }
+}
+
+destroyBlocks(blocks) {
+  for (let block of blocks) {
+    block.destroy();
+  }
+}
+
+getBlock(x, y) {
+  for (let block of this.blocks) {
+    if (block.x == x && block.y == y) {
+      return block;
     }
   }
+  return undefined;
+}
 
-  destroyBlocks(blocks) {
-    for (let block of blocks) {
-      block.destroy();
+spawnShapes() {
+  if (this.shapes.length == 0) {
+    let shape = null;
+    // Use the pre-generated next shape
+    let shapeType = this.nextShapeType;
+
+    switch (shapeType) {
+      case 0:
+        {
+          shape = new Line(0, 4);
+        }
+        break;
+      case 1:
+        {
+          shape = new Square(0, 4);
+        }
+        break;
+      case 2:
+        {
+          shape = new LShape(0, 4);
+        }
+        break;
+      case 3:
+        {
+          shape = new ZShape(0, 4);
+        }
+        break;
+      case 4:
+        {
+          shape = new TShape(0, 4);
+        }
+        break;
+    }
+
+    shape.init();
+    shape.render();
+    this.shapes.push(shape);
+
+    // Generate next shape and update preview
+    this.nextShapeType = this.getRandomRange(0, 4);
+    this.renderNextPiece();
+  }
+}
+
+getShapes() {
+  return Array.from(this.shapes);
+}
+
+removeShape(shape) {
+  this.shapes.splice(this.shapes.indexOf(shape), 1);
+}
+
+addBlocks(blocks) {
+  for (let block of blocks) {
+    this.blocks.push(block);
+  }
+}
+
+arePositonsWithinBoard(positions) {
+  for (let position of positions) {
+    if (position.x >= 16 || position.y < 0 || position.y >= 10) {
+      return false;
     }
   }
+  return true;
+}
 
-  getBlock(x, y) {
+areBlocksEmpty(positions) {
+  for (let position of positions) {
     for (let block of this.blocks) {
-      if (block.x == x && block.y == y) {
-        return block;
-      }
-    }
-    return undefined;
-  }
-
-  spawnShapes() {
-    if (this.shapes.length == 0) {
-      let shape = null;
-      // Use the pre-generated next shape
-      let shapeType = this.nextShapeType;
-
-      switch (shapeType) {
-        case 0:
-          {
-            shape = new Line(0, 4);
-          }
-          break;
-        case 1:
-          {
-            shape = new Square(0, 4);
-          }
-          break;
-        case 2:
-          {
-            shape = new LShape(0, 4);
-          }
-          break;
-        case 3:
-          {
-            shape = new ZShape(0, 4);
-          }
-          break;
-        case 4:
-          {
-            shape = new TShape(0, 4);
-          }
-          break;
-      }
-
-      shape.init();
-      shape.render();
-      this.shapes.push(shape);
-
-      // Generate next shape and update preview
-      this.nextShapeType = this.getRandomRange(0, 4);
-      this.renderNextPiece();
-    }
-  }
-
-  getShapes() {
-    return Array.from(this.shapes);
-  }
-
-  removeShape(shape) {
-    this.shapes.splice(this.shapes.indexOf(shape), 1);
-  }
-
-  addBlocks(blocks) {
-    for (let block of blocks) {
-      this.blocks.push(block);
-    }
-  }
-
-  arePositonsWithinBoard(positions) {
-    for (let position of positions) {
-      if (position.x >= 16 || position.y < 0 || position.y >= 10) {
+      let pos = block.getPosition();
+      if (pos.x == position.x && pos.y == position.y) {
         return false;
       }
     }
-    return true;
   }
+  return true;
+}
 
-  areBlocksEmpty(positions) {
-    for (let position of positions) {
-      for (let block of this.blocks) {
-        let pos = block.getPosition();
-        if (pos.x == position.x && pos.y == position.y) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
-  leftKeyPress() {
-    for (let shape of this.shapes) {
-      if (
-        this.arePositonsWithinBoard(shape.leftPositions()) &&
-        this.areBlocksEmpty(shape.leftPositions())
-      ) {
-        shape.moveLeft();
-        shape.render();
-      }
-    }
-  }
-
-  rotate() {
-    for (let shape of this.shapes) {
-      if (
-        this.arePositonsWithinBoard(shape.rotatePositions()) &&
-        this.areBlocksEmpty(shape.rotatePositions())
-      )
-        shape.rotate();
-      shape.init();
+leftKeyPress() {
+  for (let shape of this.shapes) {
+    if (
+      this.arePositonsWithinBoard(shape.leftPositions()) &&
+      this.areBlocksEmpty(shape.leftPositions())
+    ) {
+      shape.moveLeft();
       shape.render();
     }
   }
+}
 
-  rightKeyPress() {
-    for (let shape of this.shapes) {
-      if (
-        this.arePositonsWithinBoard(shape.rightPositions()) &&
-        this.areBlocksEmpty(shape.rightPositions())
-      ) {
-        shape.moveRight();
-        shape.render();
-      }
+rotate() {
+  for (let shape of this.shapes) {
+    if (
+      this.arePositonsWithinBoard(shape.rotatePositions()) &&
+      this.areBlocksEmpty(shape.rotatePositions())
+    )
+      shape.rotate();
+    shape.init();
+    shape.render();
+  }
+}
+
+rightKeyPress() {
+  for (let shape of this.shapes) {
+    if (
+      this.arePositonsWithinBoard(shape.rightPositions()) &&
+      this.areBlocksEmpty(shape.rightPositions())
+    ) {
+      shape.moveRight();
+      shape.render();
     }
   }
+}
 
-  upKeyPress() {
-    this.rotate();
-  }
+upKeyPress() {
+  this.rotate();
+}
 
-  downKeyPress() {
-    this.dropShape();
-  }
+downKeyPress() {
+  this.dropShape();
+}
 
-  getRandomRange(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
+getRandomRange(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 }
 
 // Mobile Drawer Logic
