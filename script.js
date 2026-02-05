@@ -467,7 +467,9 @@ class Board {
     setTimeout(() => {
       if (window.innerWidth <= 600) {
         container.removeClass(animClass);
-        container.html('<div id="action-text"></div>');
+        // Revert to "GO!" instead of disappearing
+        container.empty();
+        container.append('<div>G</div><div>O</div><div>!</div>');
       } else {
         el.removeClass(animClass);
         el.text("READY"); // Reset to idle state

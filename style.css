@@ -664,12 +664,20 @@ body::after {
   border-color: var(--neon-cyan);
   color: var(--neon-cyan);
   box-shadow: 0 4px 0 #005f6b;
+  width: 90px;
+  /* Wider */
+  border-radius: 10px;
+  /* Rounded Square */
 }
 
 #right {
   border-color: var(--neon-cyan);
   color: var(--neon-cyan);
   box-shadow: 0 4px 0 #005f6b;
+  width: 90px;
+  /* Wider */
+  border-radius: 10px;
+  /* Rounded Square */
 }
 
 #rotate {
