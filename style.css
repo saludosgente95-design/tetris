@@ -224,17 +224,23 @@ body::after {
 @media (max-width: 600px) {
   #outer-board {
     flex-direction: column;
+    justify-content: flex-start;
+    /* Don't force center vertically potentially */
+    align-items: center;
+    /* THIS IS KEY FOR CENTERING */
     margin-bottom: 50px;
     position: relative;
     overflow-x: hidden;
-    /* Contain drawer so it doesn't wided body */
+    width: 100%;
+    /* Ensure it spans full width */
   }
 
   /* Force Vertical Text on Mobile */
   #side-decor-left {
     display: flex;
-    /* Force show! */
     flex-direction: column;
+    position: absolute;
+    /* KEY: Force absolute so it doesn't take flex space */
     left: 2px;
     top: 50px;
     font-size: 10px;
@@ -242,11 +248,8 @@ body::after {
     opacity: 0.8;
     z-index: 5;
     transform: none;
-    /* Reset desktop transform */
     width: 15px;
-    /* Restrict width to force wrap/vertical */
     writing-mode: unset;
-    /* Reset rotation to let flex column handle it */
   }
 
   #side-decor-left div {
