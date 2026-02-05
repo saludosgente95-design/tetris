@@ -148,10 +148,12 @@ body::after {
   /* Space between lines */
   text-shadow: 0 0 10px var(--neon-purple);
   font-weight: bold;
-  opacity: 0.9;
+  opacity: 1.0;
+  /* Full visibility */
   animation: flicker 3s infinite;
   pointer-events: none;
   top: 0;
+  z-index: 100 !important;
 }
 
 #side-decor-right {
@@ -163,7 +165,8 @@ body::after {
   width: 40px;
   text-align: center;
   pointer-events: none;
-  z-index: 5;
+  z-index: 100 !important;
+  /* Above everything */
 }
 
 #action-text {
@@ -388,10 +391,12 @@ body::after {
     top: 50px;
     font-size: 10px;
     line-height: 12px;
-    opacity: 0.8;
-    z-index: 5;
+    opacity: 1.0;
+    z-index: 100 !important;
     transform: none;
-    width: 15px;
+    width: auto;
+    /* Let it wrap naturally */
+    min-width: 20px;
     writing-mode: unset;
   }
 

@@ -450,8 +450,14 @@ class Board {
     const el = $("#action-text");
     const container = $("#side-decor-right");
 
+    // Clear previous state
+    el.removeClass("anim-flash anim-spin anim-shake anim-tetris");
+    container.removeClass("anim-flash anim-spin anim-shake anim-tetris");
+
     if (window.innerWidth <= 600) {
-      // Vertical Stack for Mobile
+      // Mobile: Vertical Stack within the action-text div or container
+      // If we use container.empty(), we lose #action-text for desktop.
+      // Let's target container but preserve a placeholder if needed.
       container.empty();
       for (let char of text) {
         container.append(`<div>${char}</div>`);
@@ -467,12 +473,15 @@ class Board {
     setTimeout(() => {
       if (window.innerWidth <= 600) {
         container.removeClass(animClass);
-        // Revert to "GO!" instead of disappearing
+        // Revert to "GO!" instead of empty
         container.empty();
-        container.append('<div>G</div><div>O</div><div>!</div>');
+        const goText = "GO!";
+        for (let char of goText) {
+          container.append(`<div>${char}</div>`);
+        }
       } else {
         el.removeClass(animClass);
-        el.text("READY"); // Reset to idle state
+        el.text("READY");
       }
     }, 2000);
   }
@@ -757,8 +766,16 @@ class Board {
       this.setScore(this.getScore() + 40);
 
       // EXTRA DISTRACTION: Flash left side too
-      $("#side-decor-left").css('color', 'red').addClass('anim-shake');
-      setTimeout(() => $("#side-decor-left").css('color', '').removeClass('anim-shake'), 1000);
+      const leftBanner = $("#side-decor-left");
+      const originalHtml = leftBanner.html();
+
+      leftBanner.css('color', 'red').addClass('anim-shake');
+      leftBanner.text("TETRIS"); // Overwrite with TETRIS
+
+      setTimeout(() => {
+        leftBanner.css('color', '').removeClass('anim-shake');
+        leftBanner.html(originalHtml); // Restore Japanese
+      }, 2000);
     }
   }
 
