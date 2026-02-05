@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <title>CodePen - Tetris</title>
   <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
@@ -31,8 +32,20 @@
 
   <!-- partial:index.partial.html -->
   <div id="outer-board">
+    <div id="side-decor-left">フリー！<br><br>クレジット！</div>
+
+    <div id="leaderboard-panel">
+      <div class="lb-label">LEADERBOARD</div>
+      <ul id="lb-list">
+        <li>Loading...</li>
+      </ul>
+      <div class="my-score-label">PERSONAL BEST</div>
+      <div id="high-score">0</div>
+    </div>
+
     <div id="board">
-      <div id="banner">`n <div id="combo-display"></div>
+      <div id="banner">
+        <div id="combo-display"></div>
         <div>
           <div id="message"></div>
           <div id="new-game">Tap here to start!</div>

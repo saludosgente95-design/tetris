@@ -10,7 +10,7 @@ class AudioManager {
         // Initialize AudioContext singleton (starts minimal)
         this.audioContext = null;
 
-        // List of available background music
+        // List of generic background music (Excluding 12 and 16)
         this.musicTracks = [
             './sounds/music_1.mp3',
             './sounds/music_2.mp3',
@@ -23,12 +23,14 @@ class AudioManager {
             './sounds/music_9.mp3',
             './sounds/music_10.mp3',
             './sounds/music_11.mp3',
-            './sounds/music_12.mp3',
             './sounds/music_13.mp3',
             './sounds/music_14.mp3',
-            './sounds/music_15.mp3',
-            './sounds/music_16.mp3'
+            './sounds/music_15.mp3'
         ];
+
+        // Special Tracks
+        this.bossTrack = './sounds/music_16.mp3'; // Level 10, 20, 30...
+        this.gameOverTrack = './sounds/music_12.mp3'; // Game Over
     }
 
     // Initialize AudioContext on user interaction
@@ -41,11 +43,27 @@ class AudioManager {
         }
     }
 
-    // Load random background music
+    // Load random background music (Standard levels)
     loadRandomMusic() {
         const randomIndex = Math.floor(Math.random() * this.musicTracks.length);
         const selectedTrack = this.musicTracks[randomIndex];
         this.loadMusic(selectedTrack);
+        this.playMusic(); // Ensure it starts playing
+    }
+
+    // Play Boss Music (Level 10, 20...)
+    playBossMusic() {
+        this.loadMusic(this.bossTrack);
+        this.playMusic();
+    }
+
+    // Play Game Over Music
+    playGameOverMusic() {
+        this.loadMusic(this.gameOverTrack);
+        if (this.music) {
+            this.music.loop = false; // Only play once (optional, but usually better for Game Over)
+        }
+        this.playMusic();
     }
 
     // Load specific background music
@@ -57,10 +75,12 @@ class AudioManager {
         this.music.loop = true;
         this.music.volume = this.musicVolume;
 
-        // Auto-play next random track when current ends (if not looping)
+        // Auto-play next random track when current ends (Only if looping is false or manual sequence)
+        // For standard music, it loops. if we disable loop for gameover, it stops.
         this.music.addEventListener('ended', () => {
-            this.loadRandomMusic();
-            this.playMusic();
+            if (src !== this.gameOverTrack) {
+                this.loadRandomMusic();
+            }
         });
     }
 

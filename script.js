@@ -396,6 +396,12 @@ class Board {
     this.baseLoopInterval = 1000;
     this.gameOver = true;
     this.loopIntervalFast = parseInt(1000 / 27);
+    this.highScore = parseInt(localStorage.getItem('tetris_high_score')) || 0;
+    $("#high-score").text(this.highScore);
+
+    // Initial Leaderboard Load
+    this.fetchLeaderboard();
+
     this.init();
     this.score = 0;
     this.level = 1;
@@ -404,9 +410,53 @@ class Board {
     this.lastClearedLines = 0;
   }
 
+  fetchLeaderboard() {
+    fetch('/api/leaderboard')
+      .then(res => res.json())
+      .then(data => {
+        const list = $("#lb-list");
+        list.empty();
+        if (data.length === 0) list.append("<li>No records yet</li>");
+        data.forEach((entry, index) => {
+          let name = entry.username || "Guest";
+          if (name.length > 8) name = name.substring(0, 8) + "..";
+          list.append(`<li><span>${index + 1}. ${name}</span><span>${entry.score}</span></li>`);
+        });
+      })
+      .catch(err => console.error("Leaderboard error:", err));
+  }
+
+  submitScore() {
+    const tg = window.Telegram?.WebApp;
+    let username = "Guest";
+
+    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+      username = tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name || "User";
+    }
+
+    fetch('/api/score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username, score: this.score })
+    })
+      .then(res => res.json())
+      .then(() => {
+        this.fetchLeaderboard(); // Refresh list after submit
+      })
+      .catch(err => console.error("Submit error:", err));
+  }
+
   setScore(value) {
     this.score = value;
     $("#score").text(this.score);
+
+    // Update Personal High Score
+    if (this.score > this.highScore) {
+      this.highScore = this.score;
+      $("#high-score").text(this.highScore);
+      localStorage.setItem('tetris_high_score', this.highScore);
+    }
+
     this.updateLevel();
   }
 
@@ -417,6 +467,17 @@ class Board {
   updateLevel() {
     const newLevel = Math.floor(this.score / 100) + 1;
     if (newLevel !== this.level) {
+      // Special Music Logic
+      if (typeof audioManager !== 'undefined') {
+        if (newLevel % 10 === 0) {
+          // Enter Boss Level (10, 20, 30...)
+          audioManager.playBossMusic();
+        } else if (this.level % 10 === 0) {
+          // Leaving Boss Level (10 -> 11) - Revert to random
+          audioManager.loadRandomMusic();
+        }
+      }
+
       this.level = newLevel;
       $("#level").text(this.level);
       // Increase speed: reduce interval by 50ms per level, min 200ms
@@ -432,26 +493,32 @@ class Board {
     preview.empty();
 
     // Mini blocks for preview (smaller scale)
-    const miniBlockSize = 12;
-    const offsetX = 20;
-    const offsetY = 15;
+    // Mini blocks for preview (smaller scale)
+    const miniBlockSize = 10; // Slightly smaller to fit
+    let offsetX = 10;
+    let offsetY = 10;
 
     let positions = [];
     switch (this.nextShapeType) {
-      case 0: // Line
-        positions = [[0, 0], [1, 0], [2, 0], [3, 0]];
+      case 0: // Line (Horizontal)
+        positions = [[0, 0], [0, 1], [0, 2], [0, 3]];
+        offsetX = 10; offsetY = 15;
         break;
       case 1: // Square
         positions = [[0, 0], [0, 1], [1, 0], [1, 1]];
+        offsetX = 20; offsetY = 10;
         break;
-      case 2: // LShape
-        positions = [[0, 0], [1, 0], [2, 0], [2, 1]];
+      case 2: // LShape (Horizontal)
+        positions = [[0, 0], [0, 1], [0, 2], [1, 0]];
+        offsetX = 15; offsetY = 10;
         break;
       case 3: // ZShape
         positions = [[0, 0], [0, 1], [1, 1], [1, 2]];
+        offsetX = 15; offsetY = 10;
         break;
       case 4: // TShape
         positions = [[0, 0], [0, 1], [0, 2], [1, 1]];
+        offsetX = 15; offsetY = 10;
         break;
     }
 
@@ -462,10 +529,9 @@ class Board {
         height: miniBlockSize + 'px',
         left: (offsetX + y * miniBlockSize) + 'px',
         top: (offsetY + x * miniBlockSize) + 'px',
-        background: 'linear-gradient(145deg, #e8b4d9, #c89ff5)',
-        border: '1px solid #d8a7e8',
-        borderRadius: '2px',
-        boxShadow: '0 0 6px rgba(200, 159, 245, 0.4)'
+        background: '#fff',
+        border: '1px solid var(--neon-cyan)',
+        boxShadow: '0 0 5px var(--neon-pink)'
       });
       preview.append(miniBlock);
     });
@@ -533,11 +599,22 @@ class Board {
       this.gameOver = true;
       if (this.interval) {
         clearInterval(this.interval);
-        this.interval = undefined;
       }
+
+      // Stop Music
+      if (typeof audioManager !== 'undefined') {
+        // Play Game Over Music
+        try {
+          audioManager.playGameOverMusic();
+        } catch (e) { console.warn(e); }
+      }
+
+      // Submit Score to Global Leaderboard
+      this.submitScore();
+
       $("#banner").show();
-      $("#message").text("Game Over!");
-      $("#new-game").text("Tap here to start again!");
+      $("#message").text("ゲームオーバー"); // Game Over in Japanese
+      $("#new-game").text("Tap to Restart");
     }
   }
 
