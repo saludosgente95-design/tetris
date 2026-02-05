@@ -26,8 +26,10 @@ body {
   padding: 0;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  overflow-x: hidden;
+  height: 100vh;
+  /* Fixed height for flex calculation */
+  overflow: hidden;
+  /* No scrollbars */
   color: var(--text-color);
   text-shadow: 2px 2px #000;
 }
@@ -120,14 +122,16 @@ body::after {
 }
 
 #outer-board {
-  flex: 1;
+  flex: 1 1 auto;
+  /* Grow/Shrink to fill space */
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 20px 0;
-  margin-bottom: 150px;
   position: relative;
-  /* Anchor for side elements */
+  width: 100%;
+  min-height: 0;
+  /* Important for flex scaling */
+  padding: 5px 0;
 }
 
 #side-decor-left {

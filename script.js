@@ -909,6 +909,46 @@ $(document).ready(function () {
     }
   });
 });
+});
+
+// Auto-Scale Board Logic
+function resizeBoard() {
+  const board = document.getElementById('board');
+  if (!board) return;
+
+  // Reset transform to get natural size for calculations
+  board.style.transform = 'none';
+
+  const container = document.getElementById('outer-board');
+  if (!container) return;
+
+  // Available space in the flex container
+  const availHeight = container.clientHeight;
+  const availWidth = container.clientWidth;
+
+  const boardHeight = 448; // Base height (16 blocks * 28px) - actually slightly more with borders
+  const boardWidth = 280;  // Base width (10 blocks * 28px)
+
+  // Scale factor: Fit width AND height with some padding (20px)
+  // We prioritize containing the board fully.
+  let scale = Math.min(
+    (availHeight - 20) / boardHeight,
+    (availWidth - 10) / boardWidth,
+    1 // Cap at 1.0 (don't zoom in)
+  );
+
+  if (scale < 1) {
+    board.style.transform = `scale(${scale})`;
+  } else {
+    board.style.transform = 'none';
+  }
+}
+
+// Bind resize events
+window.addEventListener('load', resizeBoard);
+window.addEventListener('resize', resizeBoard);
+// Also call resize periodically to fix initial layout shifts
+setInterval(resizeBoard, 1000);
 
 // Start Game
 let board = new Board();
