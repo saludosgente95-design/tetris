@@ -399,8 +399,8 @@ class Board {
     this.highScore = parseInt(localStorage.getItem('tetris_high_score')) || 0;
     $("#high-score").text(this.highScore);
 
-    // Initial Leaderboard Load
     this.fetchLeaderboard();
+    this.updateUserStatusDisplay();
 
     this.init();
     this.score = 0;
@@ -428,6 +428,41 @@ class Board {
         });
       })
       .catch(err => console.error("Leaderboard error:", err));
+  }
+
+  updateUserStatusDisplay() {
+    const tg = window.Telegram?.WebApp;
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = tg?.initDataUnsafe?.user?.id || urlParams.get('userId');
+    const apiBase = urlParams.get('api_url') || '';
+    const statusUrl = apiBase ? `${apiBase}/api/user_status` : '/api/user_status';
+
+    if (!userId) return;
+
+    fetch(`${statusUrl}?user_id=${userId}&ts=` + new Date().getTime())
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) return;
+
+        const playEl = $("#play-status");
+        const creditsEl = $("#credits-status");
+
+        if (data.free_remaining > 0) {
+          playEl.html(`FREE (${data.free_remaining} left)`);
+          playEl.css("color", "#00ffcc");
+        } else {
+          playEl.html(`${data.cost} 🪙`);
+          playEl.css("color", "#ffcc00");
+        }
+
+        creditsEl.html(`Credits: ${data.credits}`);
+
+        if ($("#banner").is(":visible")) {
+          playEl.show();
+          creditsEl.show();
+        }
+      })
+      .catch(err => console.error("Status update error:", err));
   }
 
   submitScore() {
@@ -675,6 +710,8 @@ class Board {
       $("#banner").show();
       $("#message").text("ゲームオーバー"); // Game Over in Japanese
       $("#new-game").text("Tap to Restart");
+      // Update cost/credits on UI
+      this.updateUserStatusDisplay();
     }
   }
 
@@ -1092,6 +1129,8 @@ $("#new-game").click(function () {
   $("#message").text("Verificando créditos...");
   $("#banner").show();
   $("#new-game").hide();
+  $("#play-status").hide();
+  $("#credits-status").hide();
 
   // Fetch with cache busting
   fetch(`${checkUrl}?ts=` + new Date().getTime(), {
