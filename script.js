@@ -1065,11 +1065,16 @@ $("#new-game").click(function () {
 
   // Check play permission (daily limit / credits)
   const tg = window.Telegram?.WebApp;
-  // Get ID from Unsafe Data or fallback query param if debugging
   const urlParams = new URLSearchParams(window.location.search);
   let userId = tg?.initDataUnsafe?.user?.id || urlParams.get('userId');
 
+  // Get API Base URL from params (sent by bot) or default to relative (local)
+  // Example: ?api_url=https://my-ngrok-url.ngrok-free.app
+  const apiBase = urlParams.get('api_url') || '';
+  const checkUrl = apiBase ? `${apiBase}/api/check_play` : '/api/check_play';
+
   console.log("Checking play permission for UserID:", userId);
+  console.log("Using API URL:", checkUrl);
 
   if (!userId) {
     alert("Error: No se pudo identificar el usuario. Abre el juego desde Telegram.");
@@ -1080,11 +1085,8 @@ $("#new-game").click(function () {
   $("#banner").show();
   $("#new-game").hide();
 
-  // DEBUG: Show ID trying to verify
-  // alert(`Debug ID: ${userId}`);
-
   // Fetch with cache busting
-  fetch('/api/check_play?ts=' + new Date().getTime(), {
+  fetch(`${checkUrl}?ts=` + new Date().getTime(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ user_id: userId })
@@ -1094,7 +1096,6 @@ $("#new-game").click(function () {
       return res.json();
     })
     .then(data => {
-      // alert(`Respuesta: ${JSON.stringify(data)}`); // Debug response
       if (data.can_play) {
         $("#banner").hide();
         $("#new-game").show();
@@ -1103,14 +1104,12 @@ $("#new-game").click(function () {
         $("#message").html(data.message || "No puedes jugar.");
         $("#new-game").text("Cargar Créditos").show();
         $("#new-game").one('click', () => {
-          // Redirect to bot chat for credits
           if (tg) tg.close();
         });
       }
     })
     .catch(err => {
       console.error("Check play error:", err);
-      // alert("Error Fetch: " + err.message);
       $("#message").text("Error Conexión: " + err.message);
       $("#new-game").text("Reintentar").show();
     });
