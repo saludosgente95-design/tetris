@@ -219,14 +219,48 @@ body::after {
   text-shadow: 2px 2px var(--neon-cyan);
 }
 
+/* Mobile Layout Adaptation */
 @media (max-width: 600px) {
+  #outer-board {
+    flex-direction: column;
+    /* Stack elements vertically */
+    margin-bottom: 100px;
+  }
+
   #side-decor-left {
-    display: none;
+    display: block;
+    /* Force show! */
+    left: 2px;
+    /* Pin to left edge */
+    transform: none;
+    /* Reset center transform */
+    font-size: 10px;
+    /* Smaller font to fit */
+    letter-spacing: 2px;
+    top: 50px;
+    /* Align with top-ish of board */
+    opacity: 0.6;
+    /* Slight fade to not distract */
+    z-index: 5;
   }
 
   #leaderboard-panel {
-    display: none;
-    /* Hide leaderboard on mobile during game to save space, or move below */
+    display: block;
+    /* Show it! */
+    position: relative;
+    /* Not absolute */
+    right: auto;
+    top: auto;
+    transform: none;
+    width: 260px;
+    /* Match board width approx */
+    margin-top: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 5;
+  }
+
+  #board {
+    margin-bottom: 0;
   }
 }
 
