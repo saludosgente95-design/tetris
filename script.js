@@ -305,6 +305,7 @@ class Board {
     this.level = 1;
     this.nextShapeType = this.getRandomRange(0, 6);
     this.highScore = parseInt(localStorage.getItem('tetris_high_score')) || 0;
+    this.currentBaseSpeed = 1000; // Track normal speed
 
     // UI Refs
     $("#high-score").text(this.highScore);
@@ -410,6 +411,8 @@ class Board {
     const endTouch = () => {
       if (touchInterval) clearInterval(touchInterval);
       touchInterval = null;
+      // Reset speed if we were fast dropping
+      if (this.loopInterval === 50) this.resetSpeed();
     };
 
     // Bind Buttons
@@ -452,6 +455,10 @@ class Board {
         case 40: this.downKeyPress(); break;
         case 78: this.newGame(); break;
       }
+    });
+
+    $(document).keyup((e) => {
+      if (e.which === 40) this.resetSpeed();
     });
 
     // Start Button
@@ -707,6 +714,8 @@ class Board {
 
       this.nextShapeType = this.getRandomRange(0, 6);
       this.renderNextPiece();
+
+      this.resetSpeed(); // Ensure new piece starts slow
     }
   }
 
@@ -768,7 +777,8 @@ class Board {
       let speedRed = 0;
       if (this.level <= 4) speedRed = (this.level - 1) * 60;
       else speedRed = 180 + (this.level - 4) * 80;
-      this.loopInterval = Math.max(150, this.baseLoopInterval - speedRed);
+      this.currentBaseSpeed = Math.max(150, this.baseLoopInterval - speedRed);
+      this.loopInterval = this.currentBaseSpeed;
 
       // Boss Music Logic
       if (typeof audioManager !== 'undefined') {
@@ -847,6 +857,10 @@ class Board {
   downKeyPress() {
     // Fast drop
     this.loopInterval = 50;
+  }
+
+  resetSpeed() {
+    this.loopInterval = this.currentBaseSpeed || 1000;
   }
 
   addBlocks(blocks) { blocks.forEach(b => this.blocks.push(b)); }
