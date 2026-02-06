@@ -9,6 +9,8 @@
 
 // --- CONFIGURATION & PALETTE ---
 const BLOCK_SIZE = 28;
+const SPRITE_SIZE = 40; // Block + Glow padding
+const DRAW_OFFSET = (SPRITE_SIZE - BLOCK_SIZE) / 2;
 const COLS = 10;
 const ROWS = 16;
 const COLORS = {
@@ -76,7 +78,8 @@ class Shape {
         // Draw pre-rendered sprite
         const sprite = sprites[this.colorCode];
         if (sprite) {
-          ctx.drawImage(sprite, block.y * BLOCK_SIZE, block.x * BLOCK_SIZE);
+          // Draw with offset for glow
+          ctx.drawImage(sprite, block.y * BLOCK_SIZE - DRAW_OFFSET, block.x * BLOCK_SIZE - DRAW_OFFSET);
         }
       }
     }
@@ -316,6 +319,8 @@ class Board {
 
     // Offscreen Canvas for Static Blocks (Performance)
     this.staticCanvas = document.createElement('canvas');
+    this.staticCanvas.width = 280; // Logic coords usually fine for internal offscreen copy
+    this.staticCanvas.height = 448;
     this.staticCtx = this.staticCanvas.getContext('2d', { alpha: true });
 
     // Sprite Cache
@@ -340,37 +345,48 @@ class Board {
 
     classes.forEach(cls => {
       const c = document.createElement('canvas');
-      c.width = BLOCK_SIZE;
-      c.height = BLOCK_SIZE;
+      c.width = SPRITE_SIZE;
+      c.height = SPRITE_SIZE;
       const ctx = c.getContext('2d');
       const color = COLORS[cls];
       const shadow = SHADOWS[cls] || '#fff';
 
+      // Center drawing in sprite
+      const x = DRAW_OFFSET;
+      const y = DRAW_OFFSET;
+
       if (cls === 'empty') {
-        // Draw dotted grid
+        // Dotted grid (no glow needed)
         ctx.fillStyle = 'rgba(5, 217, 232, 0.1)';
-        ctx.fillRect(1, 1, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
+        ctx.fillRect(x + 1, y + 1, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
       } else {
-        // Draw Block
+        // 0. Outer Glow (The "Neon" Effect)
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = (cls === 'color-line') ? color : shadow; // Cyan gets self-color glow, others shadow
+
         // 1. Background
         ctx.fillStyle = color;
-        ctx.fillRect(0, 0, BLOCK_SIZE, BLOCK_SIZE);
+        ctx.fillRect(x, y, BLOCK_SIZE, BLOCK_SIZE);
+
+        // Reset shadow for inner details or keep it? 
+        // Better to keep shadow only for the main rect.
+        ctx.shadowBlur = 0;
 
         // 2. Inner Tile (Inset)
         ctx.fillStyle = 'rgba(0,0,0,0.1)';
-        ctx.fillRect(0, 0, BLOCK_SIZE, BLOCK_SIZE); // Dim
+        ctx.fillRect(x, y, BLOCK_SIZE, BLOCK_SIZE);
 
         ctx.fillStyle = color;
-        ctx.fillRect(2, 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4); // Main body
+        ctx.fillRect(x + 2, y + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4);
 
-        // 3. Border/Glow
+        // 3. Border (Bright rim)
         ctx.lineWidth = 2;
-        ctx.strokeStyle = shadow;
-        ctx.strokeRect(2, 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4);
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+        ctx.strokeRect(x + 2, y + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4);
 
         // 4. Highlight
         ctx.fillStyle = 'rgba(255,255,255,0.4)';
-        ctx.fillRect(2, 2, BLOCK_SIZE - 4, BLOCK_SIZE / 2 - 2);
+        ctx.fillRect(x + 2, y + 2, BLOCK_SIZE - 4, BLOCK_SIZE / 2 - 2);
       }
 
       this.sprites[cls] = c;
@@ -390,8 +406,6 @@ class Board {
     this.ctx.scale(dpr, dpr);
 
     // Resize Offscreen
-    this.staticCanvas.width = 280; // Logic coords usually fine for internal offscreen copy
-    this.staticCanvas.height = 448;
     this.staticCanvas.width = 280 * dpr;
     this.staticCanvas.height = 448 * dpr;
     this.staticCtx.scale(dpr, dpr);
@@ -567,12 +581,22 @@ class Board {
       }
     }
 
-    if (landed) {
-      // Redraw static layer with new blocks
+    if (landed) { // Check lines + Panic check
       this.redrawStaticLayer();
       this.checkLines();
+      this.checkPanic(); // Re-check panic on landing
       this.spawnShapes();
     }
+  }
+
+  checkPanic() {
+    // Find highest block
+    let minX = ROWS;
+    for (let b of this.blocks) if (b.x < minX) minX = b.x;
+
+    const isPanic = (minX <= 4) || (this.level % 10 === 0);
+    if (isPanic) $("#board").addClass("panic-mode");
+    else $("#board").removeClass("panic-mode");
   }
 
   canMove(positions) {
@@ -616,7 +640,7 @@ class Board {
     if (!$("#board").hasClass("hard-mode")) {
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
-          this.staticCtx.drawImage(this.sprites['empty'], c * BLOCK_SIZE, r * BLOCK_SIZE);
+          this.staticCtx.drawImage(this.sprites['empty'], c * BLOCK_SIZE - DRAW_OFFSET, r * BLOCK_SIZE - DRAW_OFFSET);
         }
       }
     }
@@ -625,7 +649,9 @@ class Board {
     for (const block of this.blocks) {
       const sprite = this.sprites[block.colorCode];
       if (sprite) {
-        this.staticCtx.drawImage(sprite, block.y * BLOCK_SIZE, block.x * BLOCK_SIZE);
+        if (sprite) {
+          this.staticCtx.drawImage(sprite, block.y * BLOCK_SIZE - DRAW_OFFSET, block.x * BLOCK_SIZE - DRAW_OFFSET);
+        }
       }
     }
   }
