@@ -606,6 +606,22 @@ body::after {
   border-color: #ff0055;
 }
 
+/* Flash Board Effect (Line Clear) */
+.board-flash {
+  animation: flashBoard 0.2s ease-out;
+}
+
+@keyframes flashBoard {
+  0% {
+    background: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 50px #fff;
+  }
+
+  100% {
+    background: rgba(0, 0, 0, 0.6);
+  }
+}
+
 /* Panic Mode - Breathing Red Border 🚨 */
 @keyframes panicPulse {
   0% {

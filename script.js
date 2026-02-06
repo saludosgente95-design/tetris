@@ -48,6 +48,7 @@ class Block {
     this.x = x;
     this.y = y;
     this.colorCode = colorCode || 'empty';
+    this.flashAlpha = 0; // NEW: Flash intensity
   }
 
   getPosition() { return new Position(this.x, this.y); }
@@ -416,37 +417,64 @@ class Board {
   setupControls() {
     // Touch repeat handling
     let touchInterval = null;
+    let touchStartTime = 0;
+
+    // Generic handlers for Left/Right
     const startTouch = (action) => {
       if (this.gameOver) return;
       action();
       if (touchInterval) clearInterval(touchInterval);
-      touchInterval = setInterval(action, 150); // Repeat rate
+      touchInterval = setInterval(action, 150);
     };
+
+    // Specific handler for Down (Tap vs Hold)
+    const startTouchDown = () => {
+      if (this.gameOver) return;
+      touchStartTime = Date.now();
+
+      // Start Fast Drop immediately (visual feedback)
+      this.downKeyPress();
+
+      if (touchInterval) clearInterval(touchInterval);
+      // Repeat fast drop if held
+      touchInterval = setInterval(() => this.downKeyPress(), 100);
+    };
+
     const endTouch = () => {
       if (touchInterval) clearInterval(touchInterval);
       touchInterval = null;
-      // Reset speed if we were fast dropping
       if (this.loopInterval === 50) this.resetSpeed();
     };
 
+    const endTouchDown = () => {
+      endTouch();
+      const duration = Date.now() - touchStartTime;
+      if (duration < 200) {
+        // It was a tap!
+        this.hardDrop();
+      }
+    };
+
     // Bind Buttons
-    const bindBtn = (id, action) => {
+    const bindBtn = (id, action, endAction) => {
       const btn = document.getElementById(id);
       if (!btn) return;
 
       // Touch
-      btn.addEventListener('touchstart', (e) => { e.preventDefault(); startTouch(action); }, { passive: false });
-      btn.addEventListener('touchend', endTouch);
+      btn.addEventListener('touchstart', (e) => { e.preventDefault(); action(); }, { passive: false });
+      btn.addEventListener('touchend', endAction || endTouch);
 
-      // Mouse (PC fallback)
-      btn.addEventListener('mousedown', () => startTouch(action));
-      btn.addEventListener('mouseup', endTouch);
-      btn.addEventListener('mouseleave', endTouch);
+      // Mouse
+      btn.addEventListener('mousedown', () => action());
+      btn.addEventListener('mouseup', endAction || endTouch);
+      btn.addEventListener('mouseleave', endAction || endTouch);
     };
 
-    bindBtn('left', () => this.leftKeyPress());
-    bindBtn('right', () => this.rightKeyPress());
-    bindBtn('down', () => this.downKeyPress());
+    bindBtn('left', () => startTouch(() => this.leftKeyPress()));
+    bindBtn('right', () => startTouch(() => this.rightKeyPress()));
+
+    // Special binding for Down
+    bindBtn('down', startTouchDown, endTouchDown);
 
     // Rotate (No repeat)
     const rotBtn = document.getElementById('rotate');
@@ -560,10 +588,14 @@ class Board {
     // Logic Step (Fixed Time Step)
     if (this.accumulator > this.loopInterval) {
       this.update();
-      this.accumulator = 0; // Reset or subtract? Reset safer for Tetris to avoid catch-up jumps
+      this.accumulator = 0;
     }
 
-    // Render Step (Interpolation not needed for grid game)
+    // ALWAYS Redraw static layer to animate fades/flashes smoothly
+    // (Optimization: Could flag 'needsRedraw' but this is fine for now)
+    this.redrawStaticLayer();
+
+    // Render Step
     this.draw();
 
     requestAnimationFrame((t) => this.loop(t));
@@ -606,14 +638,12 @@ class Board {
   handleLanding(shape) {
     // Add blocks to static pile
     const blocks = shape.getBlocks();
+    blocks.forEach(b => b.flashAlpha = 0.8); // Trigger flash on impact
     this.addBlocks(blocks);
     this.removeShape(shape);
 
     // FX
     if (typeof audioManager !== 'undefined') audioManager.playLand();
-    // Sparkle FX (CSS based on canvas wrapper? No, use Canvas FX)
-    // We can trigger particle burst at block positions
-    const rect = this.canvas.getBoundingClientRect();
   }
 
   draw() {
@@ -649,8 +679,14 @@ class Board {
     for (const block of this.blocks) {
       const sprite = this.sprites[block.colorCode];
       if (sprite) {
-        if (sprite) {
-          this.staticCtx.drawImage(sprite, block.y * BLOCK_SIZE - DRAW_OFFSET, block.x * BLOCK_SIZE - DRAW_OFFSET);
+        this.staticCtx.drawImage(sprite, block.y * BLOCK_SIZE - DRAW_OFFSET, block.x * BLOCK_SIZE - DRAW_OFFSET);
+
+        // NEW: Draw Flash Overlay
+        if (block.flashAlpha > 0) {
+          this.staticCtx.fillStyle = `rgba(255, 255, 255, ${block.flashAlpha})`;
+          this.staticCtx.fillRect(block.y * BLOCK_SIZE, block.x * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+          block.flashAlpha -= 0.1; // Fade out
+          if (block.flashAlpha < 0) block.flashAlpha = 0;
         }
       }
     }
@@ -692,6 +728,10 @@ class Board {
         this.blocks.forEach(b => {
           if (b.x < x) b.x++;
         });
+
+        // Flash Board Effect
+        $('#board').addClass('board-flash');
+        setTimeout(() => $('#board').removeClass('board-flash'), 200);
 
         // FX: Explode
         if (typeof particleSystem !== 'undefined') particleSystem.explodeLine(x);
@@ -881,8 +921,28 @@ class Board {
   rightKeyPress() { for (let s of this.shapes) if (this.canMove(s.rightPositions())) { s.moveRight(); this.draw(); } }
   upKeyPress() { for (let s of this.shapes) if (this.canMove(s.rotatePositions())) { s.rotate(); this.draw(); } }
   downKeyPress() {
-    // Fast drop
     this.loopInterval = 50;
+  }
+
+  hardDrop() {
+    // Move down until collision
+    while (true) {
+      if (this.canMove(this.shapes[0].fallingPositions())) {
+        this.shapes[0].fall();
+        this.score += 2; // Bonus for hard drop
+      } else {
+        break;
+      }
+    }
+    this.draw();
+    this.handleLanding(this.shapes[0]);
+    // The update loop will pick up the landing in next frame or we force update?
+    // Better to manually call similar logic to update()
+    this.redrawStaticLayer();
+    this.checkLines();
+    this.checkPanic();
+    this.spawnShapes();
+    this.resetSpeed();
   }
 
   resetSpeed() {
