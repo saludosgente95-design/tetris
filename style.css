@@ -638,79 +638,19 @@ body::after {
   height: 100%;
   pointer-events: none;
   z-index: 100;
-  /* Above blocks */
 }
 
-/* Blocks - High Contrast Pixel Style */
-.block,
-.empty {
+#tetris-canvas {
   position: absolute;
-  width: 28px;
-  height: 28px;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
 }
 
-.inner-tile {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  right: 2px;
-  bottom: 2px;
-  border: 2px solid rgba(255, 255, 255, 0.9);
-  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.8);
-}
-
-.inner-inner-tile {
-  display: none;
-}
-
-/* Neon Colors - Adjusted for Vaporwave */
-.color-line .inner-tile {
-  background: #01cdfe;
-  border-color: #bbf0ff;
-  box-shadow: 0 0 10px #01cdfe;
-}
-
-.color-square .inner-tile {
-  background: #ff71ce;
-  border-color: #ffb8e6;
-  box-shadow: 0 0 10px #ff71ce;
-}
-
-.color-lshape .inner-tile {
-  background: #05ffa1;
-  border-color: #ccffea;
-  box-shadow: 0 0 10px #05ffa1;
-}
-
-.color-zshape .inner-tile {
-  background: #b967ff;
-  border-color: #e4c1ff;
-  box-shadow: 0 0 10px #b967ff;
-}
-
-.color-tshape .inner-tile {
-  background: #fffb96;
-  border-color: #ffffd1;
-  box-shadow: 0 0 10px #fffb96;
-}
-
-.color-jshape .inner-tile {
-  background: #0080ff;
-  border-color: #80c0ff;
-  box-shadow: 0 0 10px #0080ff;
-}
-
-.color-sshape .inner-tile {
-  background: #00ff00;
-  border-color: #80ff80;
-  box-shadow: 0 0 10px #00ff00;
-}
-
-.empty .inner-tile {
-  background: transparent;
-  border: 1px dotted rgba(5, 217, 232, 0.2);
-  box-shadow: none;
-}
+/* Blocks - High Contrast Pixel Style (Legacy DOM styles removed) */
+/* Canvas now handles rendering using sprite cache */
 
 /* Banner / Messages */
 #banner {
