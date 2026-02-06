@@ -218,6 +218,124 @@ class LShape extends Shape {
   }
 }
 
+class JShape extends Shape {
+  constructor(x, y) {
+    let blocks = [];
+    blocks.push(new Block(x, y, 'color-jshape'));
+    blocks.push(new Block(x - 1, y, 'color-jshape'));
+    blocks.push(new Block(x + 1, y, 'color-jshape'));
+    blocks.push(new Block(x + 1, y - 1, 'color-jshape'));
+    super(blocks);
+    this.position = 0;
+  }
+
+  rotate() {
+    let blocks = this.rotatePositions().map(p => new Block(p.x, p.y, 'color-jshape'));
+    this.clear();
+    this.addBlocks(blocks);
+    this.position = this.getNextPosition();
+  }
+
+  rotatePositions() {
+    let pos = this.getBlocks()
+      .shift()
+      .getPosition();
+    let x = pos.x;
+    let y = pos.y;
+    let positions = [];
+    switch (this.getNextPosition()) {
+      case 0:
+        {
+          positions.push(new Position(x, y));
+          positions.push(new Position(x - 1, y));
+          positions.push(new Position(x + 1, y));
+          positions.push(new Position(x + 1, y - 1));
+        }
+        break;
+      case 1:
+        {
+          positions.push(new Position(x, y));
+          positions.push(new Position(x, y - 1));
+          positions.push(new Position(x, y + 1));
+          positions.push(new Position(x - 1, y - 1));
+        }
+        break;
+      case 2:
+        {
+          positions.push(new Position(x, y));
+          positions.push(new Position(x - 1, y));
+          positions.push(new Position(x + 1, y));
+          positions.push(new Position(x - 1, y + 1));
+        }
+        break;
+      case 3:
+        {
+          positions.push(new Position(x, y));
+          positions.push(new Position(x, y - 1));
+          positions.push(new Position(x, y + 1));
+          positions.push(new Position(x + 1, y + 1));
+        }
+        break;
+    }
+    return positions;
+  }
+
+  getNextPosition() {
+    return (this.position + 1) % 4;
+  }
+}
+
+class SShape extends Shape {
+  constructor(x, y) {
+    let blocks = [];
+    blocks.push(new Block(x, y, 'color-sshape'));
+    blocks.push(new Block(x, y + 1, 'color-sshape'));
+    blocks.push(new Block(x + 1, y, 'color-sshape'));
+    blocks.push(new Block(x + 1, y - 1, 'color-sshape'));
+    super(blocks);
+    this.position = 0;
+  }
+
+  rotate() {
+    let blocks = this.rotatePositions().map(p => new Block(p.x, p.y, 'color-sshape'));
+    this.clear();
+    this.addBlocks(blocks);
+    this.position = this.getNextPosition();
+  }
+
+  rotatePositions() {
+    let pos = this.getBlocks()
+      .shift()
+      .getPosition();
+    let x = pos.x;
+    let y = pos.y;
+    let positions = [];
+    switch (this.getNextPosition()) {
+      case 0:
+        {
+          positions.push(new Position(x, y));
+          positions.push(new Position(x, y + 1));
+          positions.push(new Position(x + 1, y));
+          positions.push(new Position(x + 1, y - 1));
+        }
+        break;
+      case 1:
+        {
+          positions.push(new Position(x, y));
+          positions.push(new Position(x - 1, y));
+          positions.push(new Position(x, y + 1));
+          positions.push(new Position(x + 1, y + 1));
+        }
+        break;
+    }
+    return positions;
+  }
+
+  getNextPosition() {
+    return (this.position + 1) % 2;
+  }
+}
+
 class TShape extends Shape {
   constructor(x, y) {
     let blocks = [];
@@ -405,9 +523,11 @@ class Board {
     this.init();
     this.score = 0;
     this.level = 1;
-    this.nextShapeType = this.getRandomRange(0, 4);
+    this.nextShapeType = this.getRandomRange(0, 6);
+    this.combo = 0;
     this.combo = 0;
     this.lastClearedLines = 0;
+    this.tetrisCount = 0; // Track 4-line clears
   }
 
   fetchLeaderboard() {
@@ -486,16 +606,19 @@ class Board {
         username: username,
         user_id: userId,
         score: this.score,
-        level: this.level
+        username: username,
+        user_id: userId,
+        score: this.score,
+        level: this.level,
+        tetris_count: this.tetrisCount
       })
     })
       .then(res => res.json())
       .then(data => {
         this.fetchLeaderboard(); // Refresh list after submit
         if (data.reward) {
-          // Show reward in banner
-          $("#message").text(data.reward);
-          $("#banner").show();
+          // Show reward in floating banner
+          this.showRewardAnimation(data.reward);
         }
       })
       .catch(err => console.error("Submit error:", err));
@@ -541,6 +664,25 @@ class Board {
     }, 2000);
   }
 
+  showRewardAnimation(text) {
+    // Play sound if available
+    if (typeof audioManager !== 'undefined') {
+      audioManager.playSound("clear"); // Use clear sound as placeholder
+    }
+
+    // Remove existing
+    $(".reward-popup").remove();
+
+    // Create new popup
+    const popup = $(`<div class="reward-popup">${text}</div>`);
+    $("body").append(popup);
+
+    // Auto-remove handled by CSS animation (3s), but safe cleanup
+    setTimeout(() => {
+      popup.remove();
+    }, 3500);
+  }
+
   setScore(value) {
     this.score = value;
     $("#score").text(this.score);
@@ -575,10 +717,44 @@ class Board {
 
       this.level = newLevel;
       $("#level").text(this.level);
-      // Increase speed: reduce interval by 50ms per level, min 200ms
-      this.loopInterval = Math.max(200, this.baseLoopInterval - (this.level - 1) * 50);
+
+      // PROGRESSIVE SPEED CURVE 🏎️
+      // Levels 1-4: -60ms per level (Standard warmup)
+      // Levels 5+: -80ms per level (Turbo kick-in)
+      // BONUS LEVEL (11, 21, 31...): SLO-MO Breather 🐢
+
+      let speedReduction = 0;
+
+      if (this.level > 1 && this.level % 10 === 1) {
+        // BONUS LEVEL: Reset to almost base speed (Relax)
+        this.loopInterval = 800; // Slow!
+
+        // Visual Indicator
+        if (typeof this.showActionText === 'function') {
+          this.showActionText("BONUS!", "anim-flash");
+        } else {
+          // Fallback if method is missing or context is weird
+          $("#action-text").text("BONUS!").addClass("anim-flash");
+        }
+      } else {
+        if (this.level <= 4) {
+          speedReduction = (this.level - 1) * 60;
+        } else {
+          // Base reduction for first 4 levels (3 * 60 = 180) + extra for higher levels
+          speedReduction = 180 + (this.level - 4) * 80;
+        }
+        this.loopInterval = Math.max(150, this.baseLoopInterval - speedReduction);
+      }
+
       if (!this.moveFast && !this.gameOver) {
         this.initGameLoop(this.loopInterval);
+      }
+
+      // HANDICAP: Level 11+ (Hide Grid)
+      if (this.level > 10) {
+        $("#board").addClass("hard-mode");
+      } else {
+        $("#board").removeClass("hard-mode");
       }
     }
   }
@@ -613,6 +789,14 @@ class Board {
         break;
       case 4: // TShape
         positions = [[0, 0], [0, 1], [0, 2], [1, 1]];
+        offsetX = 15; offsetY = 10;
+        break;
+      case 5: // JShape
+        positions = [[0, 0], [0, 1], [0, 2], [1, 2]];
+        offsetX = 15; offsetY = 10;
+        break;
+      case 6: // SShape
+        positions = [[0, 1], [0, 2], [1, 0], [1, 1]];
         offsetX = 15; offsetY = 10;
         break;
     }
@@ -661,13 +845,18 @@ class Board {
     this.level = 1;
     this.loopInterval = this.baseLoopInterval;
     $("#level").text(this.level);
-    this.nextShapeType = this.getRandomRange(0, 4);
+    this.nextShapeType = this.getRandomRange(0, 6);
     this.renderNextPiece();
     this.initGameLoop(this.loopInterval);
     this.setScore(0);
+    this.setScore(0);
     this.combo = 0;
+    this.tetrisCount = 0;
     this.lastClearedLines = 0;
     $("#banner").hide();
+
+    // Reset Handicap
+    $("#board").removeClass("hard-mode");
   }
 
   initGameLoop(value) {
@@ -788,6 +977,12 @@ class Board {
       }
       if (blocks.length == 10) {
         linesCleared++;
+
+        // Trigger Particle Explosion
+        if (typeof particleSystem !== 'undefined') {
+          particleSystem.explodeLine(x);
+        }
+
         allClearedBlocks.push(...blocks);
         let ref = this;
         this.removeBlocks(blocks);
@@ -833,6 +1028,31 @@ class Board {
         leftBanner.css('color', '').removeClass('anim-shake');
         leftBanner.html(originalHtml); // Restore Japanese
       }, 2000);
+
+      // SKILL BONUS: +1 Credit
+      this.tetrisCount++;
+      console.log("Triggering Bonus Award: +1 CREDIT");
+      this.showRewardAnimation("+1 CREDIT 🪙");
+    }
+
+    // CHECK PANIC MODE 🚨
+    // Board height is 16 rows (0-15). If any block is in top 5 rows (0-4), trigger panic.
+    let minX = 16;
+    for (let block of this.blocks) {
+      if (block.x < minX) minX = block.x;
+    }
+
+    // If blocks reach row 4 or higher (smaller index) 
+    // OR it's a BOSS LEVEL (10, 20...)
+    // OR it's ending a BONUS LEVEL (score xx80 or xx90) -> Warn speedup coming
+    let isBonusEnding = (this.level > 1 && this.level % 10 === 1 && this.score % 100 >= 80);
+
+    if (minX <= 4 || (this.level > 0 && this.level % 10 === 0) || isBonusEnding) {
+      if (!$("#board").hasClass("panic-mode")) {
+        $("#board").addClass("panic-mode");
+      }
+    } else {
+      $("#board").removeClass("panic-mode");
     }
   }
 
@@ -909,6 +1129,16 @@ class Board {
             shape = new TShape(0, 4);
           }
           break;
+        case 5:
+          {
+            shape = new JShape(0, 4);
+          }
+          break;
+        case 6:
+          {
+            shape = new SShape(0, 4);
+          }
+          break;
       }
 
       shape.init();
@@ -916,7 +1146,7 @@ class Board {
       this.shapes.push(shape);
 
       // Generate next shape and update preview
-      this.nextShapeType = this.getRandomRange(0, 4);
+      this.nextShapeType = this.getRandomRange(0, 6);
       this.renderNextPiece();
     }
   }
@@ -1006,6 +1236,88 @@ class Board {
 }
 
 // Mobile Drawer Logic
+// --- PARTICLE SYSTEM (CANVAS FX) ---
+class ParticleSystem {
+  constructor() {
+    this.canvas = document.getElementById('fx-canvas');
+    this.ctx = this.canvas.getContext('2d');
+    this.particles = [];
+    this.resize();
+
+    // Bind resize
+    window.addEventListener('resize', () => this.resize());
+
+    // Start loop
+    this.loop = this.loop.bind(this);
+    requestAnimationFrame(this.loop);
+  }
+
+  resize() {
+    // Match internal resolution to displayed size for crisp pixel art style
+    const rect = this.canvas.getBoundingClientRect();
+    this.canvas.width = rect.width;
+    this.canvas.height = rect.height;
+  }
+
+  explodeLine(yRow) {
+    // Convert board row (0-15) to pixels
+    // Assume board is roughly 280x448 with 28px blocks
+    const blockSize = 28;
+    const yPos = yRow * blockSize + (blockSize / 2);
+
+    // Create particles across the width
+    for (let x = 0; x < this.canvas.width; x += 10) {
+      this.createParticle(x, yPos, this.getRandomColor());
+    }
+  }
+
+  createParticle(x, y, color) {
+    const p = {
+      x: x,
+      y: y,
+      vx: (Math.random() - 0.5) * 10,
+      vy: (Math.random() - 0.5) * 10,
+      life: 1.0,
+      color: color,
+      size: Math.random() * 4 + 2
+    };
+    this.particles.push(p);
+  }
+
+  getRandomColor() {
+    const colors = ['#ff2a6d', '#05d9e8', '#d23be7', '#ffe600', '#ffffff'];
+    return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  loop() {
+    // Clear canvas
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    // Update and draw particles
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      let p = this.particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= 0.02; // Fade out
+      p.vy += 0.2; // Gravity? Maybe slight
+
+      if (p.life <= 0) {
+        this.particles.splice(i, 1);
+      } else {
+        this.ctx.globalAlpha = p.life;
+        this.ctx.fillStyle = p.color;
+        this.ctx.fillRect(p.x, p.y, p.size, p.size);
+        this.ctx.globalAlpha = 1.0;
+      }
+    }
+
+    requestAnimationFrame(this.loop);
+  }
+}
+
+// Global instance
+const particleSystem = new ParticleSystem();
+
 $(document).ready(function () {
   $("#lb-toggle").on("click", function () {
     $("#leaderboard-panel").toggleClass("open");
@@ -1113,6 +1425,12 @@ $("#new-game").click(function () {
   const urlParams = new URLSearchParams(window.location.search);
   let userId = tg?.initDataUnsafe?.user?.id || urlParams.get('userId');
 
+  // HACK: Allow testing on localhost without Telegram ID
+  if (!userId && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    console.log("Local testing detected: Using dummy UserID 12345");
+    userId = "12345";
+  }
+
   // Get API Base URL from params (sent by bot) or default to relative (local)
   // Example: ?api_url=https://my-ngrok-url.ngrok-free.app
   const apiBase = urlParams.get('api_url') || '';
@@ -1131,6 +1449,14 @@ $("#new-game").click(function () {
   $("#new-game").hide();
   $("#play-status").hide();
   $("#credits-status").hide();
+
+  // HACK: Bypass credit check for local testing
+  if (userId === "12345") {
+    $("#banner").hide();
+    $("#new-game").show();
+    board.newGame();
+    return;
+  }
 
   // Fetch with cache busting
   fetch(`${checkUrl}?ts=` + new Date().getTime(), {
