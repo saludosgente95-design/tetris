@@ -313,6 +313,7 @@ class Board {
 
     // UI Refs
     $("#high-score").text(this.highScore);
+    $("#message").text("TETRIS"); // RESTORE TITLE
 
     // Canvas Setup
     this.canvas = document.getElementById('tetris-canvas');
